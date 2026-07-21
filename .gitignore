@@ -1,0 +1,8 @@
+.vs/
+.idea/
+bin/
+obj/
+dist/
+
+# skill install output copied there by scripts/install.ps1
+skill/hid-bridge/bin/
