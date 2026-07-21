@@ -38,7 +38,23 @@ internal static class Keys
         ["COLON"] = 0xBA, [":"] = 0xBA, ["MINUS"] = 0xBD, ["-"] = 0xBD,
     };
 
+    // Keys whose scan code must carry the "extended" prefix bit (SendInput's
+    // KEYEVENTF_EXTENDEDKEY) to be disambiguated from their non-extended twin — e.g. the
+    // dedicated Up arrow and Numpad-8 share the same base scan code (0x48); only the
+    // extended bit tells a scancode-reading app (GLFW's Win32 backend, notably) which one
+    // was pressed. MapVirtualKey's "extended" mapping mode is not reliable for this on all
+    // systems, so this list is maintained explicitly per the standard PS/2 Set 1 table.
+    private static readonly HashSet<ushort> ExtendedVks = new()
+    {
+        0x26, 0x28, 0x25, 0x27, // UP DOWN LEFT RIGHT
+        0x2D, 0x2E, 0x24, 0x23, 0x21, 0x22, // INSERT DELETE HOME END PAGEUP PAGEDOWN
+        0xA3, 0xA5, // RCTRL RALT
+        0x5B, 0x5C, // LWIN RWIN
+    };
+
     public static bool TryGet(string name, out ushort vk) => Map.TryGetValue(name, out vk);
+
+    public static bool IsExtended(ushort vk) => ExtendedVks.Contains(vk);
 
     public static IEnumerable<string> KnownNames => Map.Keys;
 }

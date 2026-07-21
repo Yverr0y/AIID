@@ -119,6 +119,23 @@ Every command prints one JSON line to stdout (`{"ok": true, ...}` / `{"ok": fals
 - GIF capture blocks for its full duration so that a `key down` issued beforehand
   stays held for the whole recording — this is the intended way to capture motion
   (walking, flying, etc.) rather than a limitation.
+- Arrow keys, Insert/Delete/Home/End/PageUp/PageDown, and right-Ctrl/right-Alt are sent
+  as real hardware scan codes with the extended-key prefix bit forced on. Apps that
+  resolve keys from the raw scancode (GLFW's Win32 backend, notably) otherwise can't
+  tell e.g. the dedicated Up arrow from Numpad-8, since both share a base scan code —
+  found and fixed during the RetroCitizen playtest, where arrow-key menu navigation
+  silently did nothing until this was in place.
+- Some apps clear all "held" input state when they lose OS focus (to avoid stuck-key
+  bugs), so a `key down` that's still active when focus moves away and back can
+  effectively get released out from under you. `window focus` right before each
+  input burst avoids this.
+
+## Feedback and support
+
+Found a bug or want a feature? [Open an issue](https://github.com/PageMastr/AIID/issues).
+
+Like this tool? Consider donating to help fund the project:
+Venmo `@NachosWorld712` · CashApp `$TheLessBeatenPath`
 
 ## License
 

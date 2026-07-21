@@ -43,11 +43,35 @@ internal static class WindowFinder
             w.ProcessName.Contains(needle, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>
+    /// Windows blocks SetForegroundWindow from a process that isn't already the active
+    /// app (anti focus-stealing). Attaching our input queue to the current foreground
+    /// window's thread temporarily lifts that restriction — the standard workaround.
+    /// </summary>
     public static bool Focus(IntPtr hWnd)
     {
-        if (IsIconic(hWnd)) ShowWindow(hWnd, SW_RESTORE);
-        ShowWindow(hWnd, SW_SHOW);
-        return SetForegroundWindow(hWnd);
+        IntPtr foreground = GetForegroundWindow();
+        uint foregroundThread = GetWindowThreadProcessId(foreground, out _);
+        uint targetThread = GetWindowThreadProcessId(hWnd, out _);
+        uint currentThread = GetCurrentThreadId();
+
+        bool attachedToForeground = foregroundThread != currentThread && foregroundThread != 0
+            && AttachThreadInput(currentThread, foregroundThread, true);
+        bool attachedToTarget = targetThread != currentThread && targetThread != foregroundThread && targetThread != 0
+            && AttachThreadInput(currentThread, targetThread, true);
+
+        try
+        {
+            if (IsIconic(hWnd)) ShowWindow(hWnd, SW_RESTORE);
+            ShowWindow(hWnd, SW_SHOW);
+            BringWindowToTop(hWnd);
+            return SetForegroundWindow(hWnd);
+        }
+        finally
+        {
+            if (attachedToForeground) AttachThreadInput(currentThread, foregroundThread, false);
+            if (attachedToTarget) AttachThreadInput(currentThread, targetThread, false);
+        }
     }
 
     public static RECT GetWindowRect(IntPtr hWnd)

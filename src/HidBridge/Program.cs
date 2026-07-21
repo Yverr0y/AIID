@@ -41,6 +41,14 @@ static int Run(string[] args)
         case "keys":
             WriteJson(new { ok = true, keys = Keys.KnownNames.OrderBy(k => k).ToArray() });
             return 0;
+        case "keycode":
+        {
+            if (positionals.Count < 1 || !Keys.TryGet(positionals[0], out ushort dvk))
+            { WriteJson(new { ok = false, error = "usage: keycode <name>" }); return 1; }
+            uint scan = HidBridge.NativeMethods.MapVirtualKey(dvk, HidBridge.NativeMethods.MAPVK_VK_TO_VSC_EX);
+            WriteJson(new { ok = true, vk = dvk, scanRaw = scan, scanHex = scan.ToString("X4") });
+            return 0;
+        }
         case "help":
         case "--help":
         case "-h":
@@ -80,8 +88,27 @@ static int HandleWindow(List<string> pos, Dictionary<string, string?> flags)
             if (w == null) { WriteJson(new { ok = false, error = $"No visible window matching '{pos[1]}'." }); return 1; }
             bool ok = WindowFinder.Focus(w.Handle);
             Thread.Sleep(150); // let the OS settle focus before further input/capture
-            WriteJson(new { ok, title = w.Title, process = w.ProcessName });
-            return ok ? 0 : 1;
+            bool confirmed = WindowFinder.GetForeground() == w.Handle;
+            WriteJson(new { ok = ok && confirmed, title = w.Title, process = w.ProcessName, confirmed });
+            return ok && confirmed ? 0 : 1;
+        }
+
+        case "rect":
+        {
+            if (pos.Count < 2) { WriteJson(new { ok = false, error = "usage: window rect <substring>" }); return 1; }
+            var w = WindowFinder.Find(pos[1]);
+            if (w == null) { WriteJson(new { ok = false, error = $"No visible window matching '{pos[1]}'." }); return 1; }
+            var r = WindowFinder.GetClientRectOnScreen(w.Handle);
+            WriteJson(new { ok = true, left = r.Left, top = r.Top, right = r.Right, bottom = r.Bottom, width = r.Right - r.Left, height = r.Bottom - r.Top });
+            return 0;
+        }
+
+        case "active":
+        {
+            IntPtr fg = WindowFinder.GetForeground();
+            var w = WindowFinder.ListVisibleWindows().FirstOrDefault(x => x.Handle == fg);
+            WriteJson(new { ok = true, handle = fg.ToInt64(), title = w?.Title, process = w?.ProcessName });
+            return 0;
         }
 
         default:
@@ -292,6 +319,8 @@ static void PrintUsage()
       hidbridge window list
       hidbridge window find <substring>
       hidbridge window focus <substring>
+      hidbridge window active                          (what currently has OS focus)
+      hidbridge window rect <substring>                 (client-area rect in screen coords)
 
     KEYBOARD
       hidbridge key press <name> [--hold ms]

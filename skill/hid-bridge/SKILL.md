@@ -56,8 +56,13 @@ previous test spawned/killed a process).
 hidbridge.exe window list                      # all visible top-level windows
 hidbridge.exe window find <substring>           # first match, no side effects
 hidbridge.exe window focus <substring>           # bring to foreground + activate
+hidbridge.exe window active                      # what currently has OS focus (debugging)
+hidbridge.exe window rect <substring>            # client-area rect in screen coords (debugging)
 ```
 Matches against both window title and process name, case-insensitive substring.
+`window focus` verifies the target actually became the foreground window (`ok` is
+`false` if something else grabbed focus first) — if that happens, just retry the
+focus call right before the input you're about to send.
 
 ### Keyboard
 ```
@@ -121,6 +126,23 @@ hidbridge.exe gif <seconds 1-5> [--fps 10] [--maxwidth 640] [--window <substring
 - Menu-driven UIs typically respond to arrow keys / `ENTER` even when WASD does
   nothing (WASD is usually gameplay-only) — check the app's own control scheme rather
   than assuming.
+- If a specific key (arrows especially) seems to reach the window (focus confirmed)
+  but visibly does nothing, and an alternate binding for the same action exists (e.g.
+  WASD instead of arrows), try that first before assuming the tool is broken — some
+  apps only bind the arrow keys to certain screens. Mouse clicks are also a reliable
+  fallback for menu items when keyboard nav is being finicky:
+  `hidbridge.exe window rect <substring>` gives you the client-area origin to convert
+  an on-screen element's position (read off a screenshot) into absolute coordinates
+  for `mouse move` / `mouse click`.
+- A `key down` that's still held when the target window loses and regains OS focus
+  can get silently released — many apps clear all input state on focus loss to avoid
+  stuck-key bugs. Re-run `window focus` immediately before each input burst rather
+  than once at the start of a long sequence.
+- Radar/compass-style HUD indicators are often easier to navigate by than an on-screen
+  distance readout: if flying/driving toward a target makes the readout distance
+  *increase*, the readout may be path-based rather than straight-line — trust a
+  compass needle or an in-world marker's screen position over the number, and turn
+  until they align before committing to forward throttle.
 
 ## Example: playtest loop
 

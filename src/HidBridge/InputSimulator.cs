@@ -33,6 +33,19 @@ internal static class InputSimulator
 
     private static void SendKey(ushort vk, bool keyUp)
     {
+        // Send by hardware scan code (with the real extended-key prefix byte where
+        // applicable) rather than letting Windows auto-translate the VK code. Apps that
+        // resolve keys from the raw scancode in the message lParam (e.g. GLFW's Win32
+        // backend) otherwise can't tell VK_UP from the Numpad-8 key, since both share
+        // scancode 0x48 and only the extended-key bit disambiguates them.
+        uint scan = MapVirtualKey(vk, MAPVK_VK_TO_VSC_EX);
+        byte scanCode = (byte)(scan & 0xFF);
+        bool extended = (scan & 0xFF00) == 0xE000 || (scan & 0xFF00) == 0xE100 || Keys.IsExtended(vk);
+
+        uint flags = KEYEVENTF_SCANCODE;
+        if (keyUp) flags |= KEYEVENTF_KEYUP;
+        if (extended) flags |= KEYEVENTF_EXTENDEDKEY;
+
         var input = new INPUT
         {
             type = INPUT_KEYBOARD,
@@ -40,9 +53,9 @@ internal static class InputSimulator
             {
                 ki = new KEYBDINPUT
                 {
-                    wVk = vk,
-                    wScan = 0,
-                    dwFlags = keyUp ? KEYEVENTF_KEYUP : 0,
+                    wVk = 0,
+                    wScan = scanCode,
+                    dwFlags = flags,
                     time = 0,
                     dwExtraInfo = IntPtr.Zero
                 }

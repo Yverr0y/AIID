@@ -62,6 +62,11 @@ internal static class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
 
+    public const uint MAPVK_VK_TO_VSC_EX = 4;
+
+    [DllImport("user32.dll")]
+    public static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
     // ---- Windows ----
 
     public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
@@ -117,6 +122,15 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+    [DllImport("user32.dll")]
+    public static extern bool BringWindowToTop(IntPtr hWnd);
+
+    [DllImport("kernel32.dll")]
+    public static extern uint GetCurrentThreadId();
 
     public const int SW_RESTORE = 9;
     public const int SW_SHOW = 5;
